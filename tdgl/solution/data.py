@@ -322,6 +322,67 @@ class DynamicsData:
         if legend:
             ax.legend(loc=0)
         return fig, axes
+    
+    def plot_all_pairs_individually(self, tmin=-np.inf, tmax=np.inf, grid=True, mean_voltage=True, labels=True, legend=False):
+        num_probes = self.mu.shape[0]
+        for i in range(0, num_probes - 1, 2):  # Increment by 2 starting from 0
+            j = i + 1
+            if j < num_probes:  # Ensure j is a valid index
+                fig, axes = self.plot(i, j, tmin, tmax, grid, mean_voltage, labels, legend)
+                # Label indicating the probe indices
+                title = f"Voltage and Phase Difference: Probes {i} and {j}"
+                fig.suptitle(title)
+                plt.show()
+    
+    def plot_pair(self, i, j, tmin, tmax, ax1, ax2):
+        ts = self.time
+        vs = self.voltage(i, j)
+        phases = self.phase_difference(i, j)
+        indices = self.time_slice(tmin, tmax)
+        # Plotting data for each pair
+        ax1.plot(ts[indices], vs[indices], label=fr'$V_{{{i}-{j}}}$')
+
+        ax2.plot(ts[indices], phases[indices], label=fr'$\Delta\theta_{{{i}-{j}}}$')
+
+    def plot_all_pairs(self, tmin=-np.inf, tmax=np.inf, grid=True, mean_voltage=True, labels=True, legend=True, include_neighbors=True):
+        num_probes = self.mu.shape[0]
+        
+        # Initialize a single figure with subplots
+        fig, axes = plt.subplots(2, 2, figsize=(14, 10))  # 2 rows, 2 columns
+        ax1_successive, ax1_neighbors = axes[0]  # First row for voltage
+        ax2_successive, ax2_neighbors = axes[1]  # Second row for phase difference
+
+        ax1_successive.set_title('Voltage Difference Across Longitudinal Pairs')
+        ax1_neighbors.set_title('Voltage Differences Across Nearest Neighbors')
+        ax2_successive.set_title('Phase Differences Across Longitudinal Pairs')
+        ax2_neighbors.set_title('Phase Differences Across Nearest Neighbors')
+
+        # Set labels for axes
+        for ax in axes.flat:
+            ax.set_xlabel('Time')
+            ax.set_ylabel('Voltage (V)' if 'Voltage' in ax.get_title() else 'Phase Difference (Radians)')
+
+        # Plot successive pairs
+        for i in range(0, num_probes - 1, 2):
+            j = i + 1
+            if j < num_probes:
+                self.plot_pair( i, j, tmin, tmax, ax1_successive, ax2_successive)
+
+        # Plot nearest neighbor pairs if enabled
+        if include_neighbors:
+            for i in range(0, num_probes - 2, 2):
+                j = i + 2
+                if j < num_probes:
+                    self.plot_pair( i, j, tmin, tmax, ax1_neighbors, ax2_neighbors)
+
+        if legend:
+            ax1_successive.legend(loc='upper right')
+            ax1_neighbors.legend(loc='upper right')
+            ax2_successive.legend(loc='upper right')
+            ax2_neighbors.legend(loc='upper right')
+        
+        plt.tight_layout()
+        plt.show()
 
     def plot_dt(
         self,
